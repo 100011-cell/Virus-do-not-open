@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2D Sphere Movement - Touch Circle</title>
+  <style>
+    canvas {
+      display: block;
+      margin: 0 auto;
+      background-color: #f0f0f0;
+    }
+    .joystick-container {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      width: 150px;
+      height: 150px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 50%;
+      touch-action: none;
+    }
+    .joystick {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- Joystick -->
+  <div class="joystick-container" id="joystick-container">
+    <div class="joystick" id="joystick"></div>
+  </div>
+
+  <script>
+    // Canvas setup
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // Circle properties
+    const circle = {
+      x: canvas.width / 2,
+      y: canvas.height / 2,
+      radius: 20,
+      color: "blue",
+      speed: 2, // Movement speed
+    };
+
+    // Joystick setup
+    const joystickContainer = document.getElementById("joystick-container");
+    const joystick = document.getElementById("joystick");
+    const joystickCenter = { x: 75, y: 75 }; // Center of the joystick container
+    const maxJoystickDistance = 50; // Max distance the joystick can move
+    let joystickTouchId = null;
+
+    // Movement vector
+    const movement = { x: 0, y: 0 };
+
+    // Handle touch events on the joystick
+    joystickContainer.addEventListener("touchstart", (event) => {
+      const touch = event.touches[0];
+      joystickTouchId = touch.identifier;
+    });
+
+    joystickContainer.addEventListener("touchmove", (event) => {
+      const touch = Array.from(event.touches).find((t) => t.identifier === joystickTouchId);
+      if (!touch) return;
+
+      // Get touch position relative to the joystick container
+      const rect = joystickContainer.getBoundingClientRect();
+      const touchX = touch.clientX - rect.left;
+      const touchY = touch.clientY - rect.top;
+
+      // Calculate distance from the center
+      const dx = touchX - joystickCenter.x;
+      const dy = touchY - joystickCenter.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      // Limit the joystick movement within the container
+      const angle = Math.atan2(dy, dx);
+      const limitedDistance = Math.min(distance, maxJoystickDistance);
+      const newX = joystickCenter.x + Math.cos(angle) * limitedDistance;
+      const newY = joystickCenter.y + Math.sin(angle) * limitedDistance;
+
+      // Update joystick position
+      joystick.style.transform = `translate(${newX - 30}px, ${newY - 30}px)`;
+
+      // Update movement vector (normalized to [-1, 1])
+      movement.x = Math.cos(angle) * (limitedDistance / maxJoystickDistance);
+      movement.y = Math.sin(angle) * (limitedDistance / maxJoystickDistance);
+    });
+
+    joystickContainer.addEventListener("touchend", (event) => {
+      if (Array.from(event.changedTouches).find((t) => t.identifier === joystickTouchId)) {
+        joystickTouchId = null;
+
+        // Reset joystick to the center
+        joystick.style.transform = "translate(-50%, -50%)";
+
+        // Stop movement
+        movement.x = 0;
+        movement.y = 0;
+      }
+    });
+
+    // Update function to handle movement
+    function update() {
+      circle.x += movement.x * circle.speed;
+      circle.y += movement.y * circle.speed;
+
+      // Prevent circle from leaving the canvas
+      circle.x = Math.max(circle.radius, Math.min(canvas.width - circle.radius, circle.x));
+      circle.y = Math.max(circle.radius, Math.min(canvas.height - circle.radius, circle.y));
+    }
+
+    // Draw function to render the circle
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.beginPath();
+      ctx.arc(circle.x, circle.y, circle.radius, 0, Math.PI * 2);
+      ctx.fillStyle = circle.color;
+      ctx.fill();
+      ctx.closePath();
+    }
+
+    // Game loop
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Start the game loop
+    gameLoop();
+  </script>
+</body>
+</html>
